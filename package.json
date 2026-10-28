@@ -1,0 +1,57 @@
+{
+  "name": "dsh-hint-handoff",
+  "version": "0.1.0",
+  "description": "提示交接：把 dsh-hint-ball 与 dsh-auto-handoff 合并成一个本地 DSH 插件——侧栏「提示交接」入口、消息板块 + 交接按钮的暗色弹窗、Computer Use / 标准两种完全权限模式的交接，以及按真实压缩轮数阈值自动触发交接。 · Merged DeepSeek Harness plugin (hint ball + auto handoff): one sidebar entry, a compact dark dialog with a hint list and a handoff action (Computer Use / standard modes, both full access), and automatic handoff driven by the real compaction-round threshold.",
+  "type": "module",
+  "main": "lib/index.js",
+  "license": "MIT",
+  "private": true,
+  "keywords": [
+    "deepseek",
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "hint",
+    "notification",
+    "handoff",
+    "compaction",
+    "context"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "check": "node --check lib/index.js && node --check lib/hints.js && node --check lib/handoff.js && node --check lib/hint-store.js && node --check lib/handoff-doc.js && node --check lib/client.js",
+    "test": "node test/smoke.mjs"
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./hint-store": "./lib/hint-store.js",
+    "./handoff-doc": "./lib/handoff-doc.js",
+    "./locale/*.json": "./locale/*.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "locale",
+    "test",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  }
+}

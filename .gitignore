@@ -1,0 +1,20 @@
+﻿# ── local build / screenshot scratch
+_work/
+_review.html
+node_modules/
+dist/
+
+# ── plugin runtime state (never commit)
+config.json
+.dsh-hints.json
+.dsh-handoff/
+test/.tmp-*
+*.bak-*
+*.bak
+
+# ── editor / OS noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

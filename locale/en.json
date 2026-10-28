@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Hint & Handoff",
+    "description": "A sidebar entry that opens a compact dialog with the hint list and a handoff button. Handoff offers Computer Use mode or Standard mode (both full access), and automatic handoff follows the real automatic-compaction round threshold."
+  }
+}

@@ -1,0 +1,803 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>提示交接 · DSH Hint Handoff — 把重要提示钉在侧边栏</title>
+<meta name="description" content="提示交接是 DeepSeek Harness 的侧边栏插件：把重要提示钉在侧边栏面板，并用「交接会话」把当前会话完整交给下一个会话。MIT、零第三方依赖、完全本地。" />
+<meta property="og:title" content="提示交接 · DSH Hint Handoff" />
+<meta property="og:description" content="把重要提示钉在侧边栏，而不是让它们被 transcript 刷走。DeepSeek Harness 插件。" />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="assets/hero.jpg" />
+<meta name="theme-color" content="#08090b" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d1017'/%3E%3Ctext x='16' y='23' font-size='19' text-anchor='middle' fill='%237aaaff' font-family='monospace'%3E%E2%97%8E%3C/text%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#08090b;
+    --bg-2:#0b0d11;
+    --panel:#101218;
+    --panel-2:#14171f;
+    --line:rgba(255,255,255,.08);
+    --line-2:rgba(255,255,255,.14);
+    --ink:#f4f6fa;
+    --ink-2:#c5cad3;
+    --ink-3:#8d939e;
+    --ink-4:#61666f;
+    --blue:#7aaaff;
+    --blue-2:#4a72c9;
+    --amber:#f59e0b;
+    --red:#f25a5a;
+    --green:#22c55e;
+    --violet:#a78bfa;
+    --serif:"Noto Serif SC","Songti SC","Source Han Serif SC",STSong,SimSun,serif;
+    --sans:"Segoe UI Variable Text","Segoe UI","PingFang SC","Microsoft YaHei UI","Noto Sans SC",sans-serif;
+    --mono:"Cascadia Code","Cascadia Mono","JetBrains Mono",SFMono-Regular,Consolas,monospace;
+    --radius:14px;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);font-size:16px;line-height:1.75;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(1100px 560px at 50% -12%,rgba(122,170,255,.16),transparent 66%),
+      radial-gradient(760px 420px at 88% 8%,rgba(245,158,11,.07),transparent 70%),
+      radial-gradient(900px 520px at 6% 26%,rgba(122,170,255,.06),transparent 72%);
+  }
+  body::after{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+    background-size:72px 72px;
+    -webkit-mask-image:radial-gradient(ellipse 70% 52% at 50% 18%,#000 8%,transparent 74%);
+    mask-image:radial-gradient(ellipse 70% 52% at 50% 18%,#000 8%,transparent 74%);
+  }
+  .progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:100;background:linear-gradient(90deg,var(--blue),#c7d9ff 60%,var(--amber));box-shadow:0 0 18px rgba(122,170,255,.55)}
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%;display:block}
+  ::selection{background:rgba(122,170,255,.3);color:#fff}
+
+  .wrap{width:100%;max-width:var(--maxw);margin:0 auto;padding:0 28px;position:relative;z-index:1}
+
+  /* ───────── nav ───────── */
+  .nav{position:sticky;top:0;z-index:60;backdrop-filter:blur(18px) saturate(120%);-webkit-backdrop-filter:blur(18px) saturate(120%);background:rgba(8,9,11,.72);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;gap:26px;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;flex:none}
+  .brand-mark{width:30px;height:30px;border-radius:9px;border:1px solid rgba(122,170,255,.35);background:linear-gradient(160deg,rgba(122,170,255,.22),rgba(122,170,255,.03));display:grid;place-items:center;color:#cfe0ff;font-family:var(--mono);font-size:15px;box-shadow:inset 0 0 18px rgba(122,170,255,.16)}
+  .brand-text{display:flex;flex-direction:column;line-height:1.15}
+  .brand-text b{font-family:var(--serif);font-size:16px;letter-spacing:.06em;font-weight:700}
+  .brand-text span{font-family:var(--mono);font-size:9px;letter-spacing:.22em;color:var(--ink-3)}
+  .nav-links{display:flex;align-items:center;gap:24px;margin-left:14px;font-size:13.5px;color:var(--ink-2)}
+  .nav-links a{padding:4px 0;position:relative;transition:color .18s}
+  .nav-links a:hover{color:#fff}
+  .nav-links a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--blue);transform:scaleX(0);transform-origin:left;transition:transform .22s}
+  .nav-links a:hover::after{transform:scaleX(1)}
+  .nav-cta{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;font-family:var(--sans);font-size:14px;font-weight:600;line-height:1;padding:11px 18px;border:1px solid transparent;cursor:pointer;transition:transform .18s,background .18s,border-color .18s,box-shadow .18s;white-space:nowrap}
+  .btn svg{width:15px;height:15px;flex:none}
+  .btn-primary{background:#eef2fb;color:#0b0e14;border-color:#eef2fb;box-shadow:0 8px 26px rgba(200,220,255,.12)}
+  .btn-primary:hover{transform:translateY(-1px);background:#fff;box-shadow:0 12px 34px rgba(200,220,255,.2)}
+  .btn-ghost{background:rgba(255,255,255,.03);color:var(--ink);border-color:var(--line-2)}
+  .btn-ghost:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.28);transform:translateY(-1px)}
+  .btn-small{padding:8px 13px;font-size:12.5px;border-radius:9px}
+
+  /* ───────── hero ───────── */
+  .hero{padding:84px 0 26px;text-align:center}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.26em;color:#a9bfe4;border:1px solid rgba(122,170,255,.28);border-radius:999px;padding:7px 16px;background:rgba(122,170,255,.055);text-transform:uppercase}
+  .eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--blue);box-shadow:0 0 10px rgba(122,170,255,.9)}
+  h1.hero-title{font-family:var(--serif);font-weight:700;font-size:clamp(56px,9vw,112px);line-height:1.04;letter-spacing:.03em;margin:22px 0 0;color:#f6f8fc;text-shadow:0 0 80px rgba(122,170,255,.22)}
+  h1.hero-title em{font-style:normal;color:#b9cdff;position:relative}
+  .hero-mono{font-family:var(--mono);font-size:clamp(10px,1.1vw,13px);letter-spacing:.58em;color:#7f93b8;margin:16px 0 0;padding-left:.58em}
+  .hero-sub{font-size:clamp(16px,1.7vw,20px);color:var(--ink-2);margin:22px auto 0;max-width:760px;letter-spacing:.01em}
+  .hero-sub b{color:#fff;font-weight:600}
+  .hero-actions{display:flex;justify-content:center;gap:12px;margin-top:32px;flex-wrap:wrap}
+  .hero-meta{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:26px}
+  .chip{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:#b9c2d2;border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:rgba(255,255,255,.025)}
+  .chip i{font-style:normal;color:var(--blue);margin-right:6px}
+  .hero-note{font-family:var(--mono);font-size:11px;color:var(--ink-4);margin-top:18px;letter-spacing:.04em}
+
+  /* hero window */
+  .window-wrap{position:relative;margin:56px auto 0;max-width:1040px}
+  .window-wrap::before{content:"";position:absolute;inset:-8% -6% -12%;background:radial-gradient(ellipse at 50% 42%,rgba(122,170,255,.2),transparent 66%);filter:blur(34px);z-index:-1}
+  .window{border:1px solid var(--line-2);border-radius:16px;overflow:hidden;background:#0f1116;box-shadow:0 50px 120px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.5);position:relative}
+  .window-bar{height:40px;display:flex;align-items:center;gap:7px;padding:0 15px;border-bottom:1px solid var(--line);background:#12151c}
+  .window-bar .d{width:9px;height:9px;border-radius:50%;background:#2a2d35}
+  .window-bar .d:nth-child(1){background:#3a3d45}
+  .window-bar .url{margin-left:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:.03em;border:1px solid var(--line);border-radius:6px;padding:3px 10px;background:rgba(255,255,255,.02)}
+  .window img{width:100%;height:auto}
+  .float-tag{position:absolute;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:7px;backdrop-filter:blur(10px);border:1px solid var(--line-2);animation:bob 7s ease-in-out infinite}
+  .float-tag .p{width:6px;height:6px;border-radius:50%}
+  .float-tag.info{left:-74px;top:30%;background:rgba(16,18,24,.88);color:#cfd6e4}
+  .float-tag.info .p{background:#8d939e}
+  .float-tag.warn{right:-78px;top:40%;background:rgba(30,23,10,.88);color:#ffcf8a;animation-delay:-2.4s}
+  .float-tag.warn .p{background:var(--amber);box-shadow:0 0 9px rgba(245,158,11,.8)}
+  .float-tag.error{left:-58px;bottom:15%;background:rgba(34,15,15,.88);color:#ffb3b3;animation-delay:-4.6s}
+  .float-tag.error .p{background:var(--red);box-shadow:0 0 9px rgba(242,90,90,.8)}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+  /* ───────── section frame ───────── */
+  section{padding:96px 0;position:relative}
+  .sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:36px;margin-bottom:44px;flex-wrap:wrap}
+  .sec-kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:.3em;color:var(--blue);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .sec-kicker::before{content:"";width:22px;height:1px;background:var(--blue);opacity:.7}
+  h2.sec-title{font-family:var(--serif);font-size:clamp(30px,4.2vw,46px);line-height:1.18;letter-spacing:.02em;margin:0;font-weight:700}
+  .sec-desc{max-width:420px;color:var(--ink-3);font-size:14.5px;line-height:1.85;margin:0}
+  .rule{height:1px;background:linear-gradient(90deg,var(--line-2),var(--line) 40%,transparent);margin:0}
+
+  /* ───────── why / compare ───────── */
+  .compare{display:grid;grid-template-columns:1fr;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:rgba(255,255,255,.012)}
+  .compare-row{display:grid;grid-template-columns:1.15fr 1fr 1.1fr;gap:0;border-top:1px solid var(--line)}
+  .compare-row:first-child{border-top:0}
+  .compare-row > div{padding:18px 22px;font-size:14px;line-height:1.7}
+  .compare-row.head > div{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);text-transform:uppercase;background:rgba(255,255,255,.02);padding-top:14px;padding-bottom:14px}
+  .compare-row.head .hint-col{color:#b9cdf5}
+  .compare-row > div:first-child{color:var(--ink-2)}
+  .compare-row .old{color:var(--ink-4);border-left:1px solid var(--line)}
+  .compare-row .new{color:#e8ecf3;border-left:1px solid var(--line);background:rgba(122,170,255,.035)}
+  .mark{font-family:var(--mono);font-size:11px;margin-right:7px}
+  .mark.x{color:#5a5f68}
+  .mark.ok{color:var(--green)}
+  .quote{margin:38px 0 0;padding:22px 26px;border-left:2px solid var(--blue);background:linear-gradient(90deg,rgba(122,170,255,.07),transparent 70%);color:#d9e2f2;font-family:var(--serif);font-size:clamp(17px,2vw,21px);line-height:1.8}
+  .quote small{display:block;font-family:var(--sans);font-size:13px;color:var(--ink-3);margin-top:8px;letter-spacing:.01em}
+
+  /* ───────── features ───────── */
+  .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .feat{border:1px solid var(--line);border-radius:var(--radius);padding:24px 22px 22px;background:linear-gradient(170deg,rgba(255,255,255,.035),rgba(255,255,255,0) 60%);position:relative;transition:transform .2s,border-color .2s,background .2s;overflow:hidden}
+  .feat:hover{transform:translateY(-3px);border-color:rgba(122,170,255,.35);background:linear-gradient(170deg,rgba(122,170,255,.07),rgba(255,255,255,0) 62%)}
+  .feat-ico{width:34px;height:34px;border-radius:9px;border:1px solid var(--line-2);display:grid;place-items:center;font-family:var(--mono);font-size:15px;color:#cfe0ff;background:rgba(122,170,255,.06);margin-bottom:16px}
+  .feat h3{font-size:15.5px;margin:0 0 8px;font-weight:600;letter-spacing:.01em}
+  .feat p{margin:0;color:var(--ink-3);font-size:13.5px;line-height:1.8}
+  .feat .tagline{position:absolute;right:18px;top:20px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--ink-4)}
+
+  /* ───────── star band ───────── */
+  .star-band{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(122,170,255,.06),rgba(8,9,11,0)),radial-gradient(700px 240px at 50% 50%,rgba(245,158,11,.07),transparent 70%);padding:58px 0;text-align:center;position:relative;overflow:hidden}
+  .star-band .stars{position:absolute;inset:0;pointer-events:none;opacity:.5;background-image:radial-gradient(1.4px 1.4px at 12% 30%,#fff,transparent),radial-gradient(1.2px 1.2px at 26% 70%,#9fb6dd,transparent),radial-gradient(1.6px 1.6px at 73% 24%,#fff,transparent),radial-gradient(1.1px 1.1px at 84% 62%,#ffd9a0,transparent),radial-gradient(1.3px 1.3px at 55% 82%,#9fb6dd,transparent),radial-gradient(1px 1px at 40% 18%,#fff,transparent)}
+  .star-band p{font-family:var(--serif);font-size:clamp(20px,2.8vw,30px);line-height:1.6;margin:0 auto 8px;color:#f2f5fa;max-width:760px;position:relative;z-index:1}
+  .star-band p b{color:#ffd9a0;font-weight:700}
+  .star-band .sub{font-family:var(--sans);font-size:13.5px;color:var(--ink-3);margin-bottom:24px;position:relative;z-index:1}
+  .star-band .btn{position:relative;z-index:1}
+
+  /* ───────── gallery ───────── */
+  .shots{display:flex;flex-direction:column;gap:26px}
+  .shot{border:1px solid var(--line);border-radius:16px;background:#0c0e12;overflow:hidden;transition:border-color .2s,transform .2s}
+  .shot:hover{border-color:rgba(122,170,255,.3);transform:translateY(-2px)}
+  .shot-frame{padding:10px;background:#0a0c10}
+  .shot img{width:100%;height:auto;border-radius:9px;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.55)}
+  .shot-cap{display:flex;align-items:baseline;gap:14px;padding:16px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .shot-cap .n{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--blue)}
+  .shot-cap b{font-size:14.5px;font-weight:600}
+  .shot-cap span{font-size:12.5px;color:var(--ink-3)}
+  .shots-two{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+  .shots-two .shot img{max-height:620px;object-fit:cover;object-position:top center}
+
+  /* ───────── api / usage ───────── */
+  .usage-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:26px;align-items:start}
+  .params{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .params table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .params th{text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--ink-3);font-weight:500;text-transform:uppercase;padding:13px 16px;background:rgba(255,255,255,.025);border-bottom:1px solid var(--line)}
+  .params td{padding:13px 16px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top}
+  .params tr:last-child td{border-bottom:0}
+  .params code{font-family:var(--mono);font-size:12px;color:#b9cdf5;background:rgba(122,170,255,.08);border:1px solid rgba(122,170,255,.14);border-radius:5px;padding:1.5px 6px}
+  .params .req{color:var(--amber)}
+  .params .opt{color:var(--ink-4)}
+  .params .lvl{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11.5px}
+  .params .lvl i{width:6px;height:6px;border-radius:50%;font-style:normal}
+  .lvl-i i{background:#8d939e}.lvl-w i{background:var(--amber)}.lvl-e i{background:var(--red)}
+
+  .codebox{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#0b0d12}
+  .code-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+  .code-head .lang{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--ink-3)}
+  .code-head .file{font-family:var(--mono);font-size:11px;color:var(--ink-4)}
+  .copy{margin-left:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink-2);background:rgba(255,255,255,.05);border:1px solid var(--line-2);border-radius:6px;padding:5px 10px;cursor:pointer;transition:background .18s,color .18s,border-color .18s}
+  .copy:hover{background:rgba(122,170,255,.14);border-color:rgba(122,170,255,.4);color:#fff}
+  .copy.done{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08)}
+  pre{margin:0;padding:18px;overflow:auto;font-family:var(--mono);font-size:12.5px;line-height:1.8;color:#c9d1e0;tab-size:2;white-space:pre-wrap;word-break:break-word}
+  pre .c{color:#5d6673}
+  pre .s{color:#a5d6a7}
+  pre .k{color:#9cc7ff}
+  pre .n{color:#f0c987}
+  .tabs{display:flex;gap:6px;padding:10px 12px 0;background:rgba(255,255,255,.015)}
+  .tab{font-family:var(--mono);font-size:11px;color:var(--ink-3);background:transparent;border:1px solid transparent;border-radius:7px;padding:6px 12px;cursor:pointer;letter-spacing:.04em}
+  .tab.on{color:#e9eef8;background:rgba(122,170,255,.1);border-color:rgba(122,170,255,.28)}
+  .tab-body{display:none}
+  .tab-body.on{display:block}
+
+  .steps{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:14px}
+  .steps li{display:flex;gap:14px;align-items:flex-start;font-size:13.8px;color:var(--ink-2);line-height:1.75}
+  .steps .num{flex:none;width:24px;height:24px;border-radius:7px;border:1px solid var(--line-2);display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--blue);background:rgba(122,170,255,.06);margin-top:2px}
+  .steps b{color:#fff;font-weight:600}
+
+  /* ───────── discussions ───────── */
+  .disc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .disc{display:flex;flex-direction:column;gap:14px;border:1px solid var(--line);border-radius:var(--radius);padding:20px 20px 18px;background:linear-gradient(165deg,rgba(255,255,255,.03),rgba(255,255,255,0) 55%);transition:transform .2s,border-color .2s,background .2s;position:relative}
+  .disc:hover{transform:translateY(-3px);border-color:rgba(122,170,255,.32);background:linear-gradient(165deg,rgba(122,170,255,.07),rgba(255,255,255,0) 58%)}
+  .disc-top{display:flex;align-items:center;gap:10px}
+  .disc-tag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;border-radius:999px;padding:3.5px 9px;border:1px solid}
+  .tag-qa{color:#ffd08a;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.09)}
+  .tag-idea{color:#a9c7ff;border-color:rgba(122,170,255,.35);background:rgba(122,170,255,.09)}
+  .tag-show{color:#9fe3b8;border-color:rgba(34,197,94,.32);background:rgba(34,197,94,.08)}
+  .tag-ann{color:#c9b8ff;border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.09)}
+  .disc-cat{margin-left:auto;padding-right:20px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--ink-4)}
+  .disc h3{font-size:15.5px;line-height:1.6;margin:0;font-weight:600;color:#eef2f8}
+  .disc p{margin:0;font-size:12.8px;line-height:1.75;color:var(--ink-3);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .disc-foot{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:4px}
+  .avatar{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600;color:#0a0c10;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.16)}
+  .av-1{background:linear-gradient(140deg,#8fb3ff,#4a72c9)}
+  .av-2{background:linear-gradient(140deg,#ffd08a,#e08b1e)}
+  .av-3{background:linear-gradient(140deg,#9fe3b8,#2f9e63)}
+  .av-4{background:linear-gradient(140deg,#c9b8ff,#7c5fd3)}
+  .disc-author{font-size:12px;color:var(--ink-2)}
+  .disc-meta{margin-left:auto;display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:.04em}
+  .disc-meta .r{display:inline-flex;align-items:center;gap:4px}
+  .disc-meta svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.6}
+  .disc-arrow{position:absolute;right:18px;top:20px;font-family:var(--mono);font-size:13px;color:var(--ink-4);transition:transform .2s,color .2s}
+  .disc:hover .disc-arrow{transform:translate(2px,-2px);color:var(--blue)}
+  .disc-cta{display:flex;justify-content:center;margin-top:26px}
+  .disc-note{text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:.05em;margin-top:14px}
+
+  /* ───────── faq ───────── */
+  .faq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  details.fq{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.018);padding:0 18px;transition:border-color .2s,background .2s}
+  details.fq[open]{border-color:rgba(122,170,255,.28);background:rgba(122,170,255,.04)}
+  details.fq summary{list-style:none;cursor:pointer;padding:17px 0;font-size:14px;font-weight:600;color:#e9edf5;display:flex;align-items:center;gap:12px}
+  details.fq summary::-webkit-details-marker{display:none}
+  details.fq summary::before{content:"+";font-family:var(--mono);color:var(--blue);font-size:15px;width:14px;flex:none;transition:transform .2s}
+  details.fq[open] summary::before{content:"−"}
+  details.fq p{margin:0 0 17px 26px;font-size:13.2px;line-height:1.85;color:var(--ink-3)}
+  details.fq p code{font-family:var(--mono);font-size:11.8px;color:#b9cdf5}
+
+  /* ───────── footer ───────── */
+  footer{border-top:1px solid var(--line);padding:64px 0 40px;background:linear-gradient(180deg,rgba(122,170,255,.04),transparent 40%)}
+  .foot-star{text-align:center;margin-bottom:52px}
+  .foot-star p{font-family:var(--serif);font-size:clamp(19px,2.4vw,26px);color:#eef2f8;margin:0 0 18px}
+  .foot-star p b{color:#ffd9a0}
+  .foot-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap;padding-top:32px;border-top:1px solid var(--line)}
+  .foot-brand{max-width:340px}
+  .foot-brand .brand{margin-bottom:12px}
+  .foot-brand p{font-size:12.8px;color:var(--ink-3);line-height:1.8;margin:0}
+  .foot-cols{display:flex;gap:64px;flex-wrap:wrap}
+  .foot-col h4{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--ink-4);margin:0 0 14px;font-weight:500;text-transform:uppercase}
+  .foot-col a{display:block;font-size:13px;color:var(--ink-2);margin-bottom:9px;transition:color .18s}
+  .foot-col a:hover{color:var(--blue)}
+  .foot-bottom{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-top:44px;padding-top:22px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:.04em}
+  .foot-bottom .heart{color:#ffd9a0}
+
+  /* reveal */
+  .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){
+    .reveal{opacity:1;transform:none;transition:none}
+    .float-tag{animation:none}
+    html{scroll-behavior:auto}
+  }
+
+  /* ───────── responsive ───────── */
+  @media (max-width:1200px){ .float-tag{display:none} }
+  @media (max-width:1024px){
+    .feat-grid{grid-template-columns:1fr 1fr}
+    .usage-grid{grid-template-columns:1fr}
+    .nav-links{display:none}
+  }
+  @media (max-width:860px){
+    section{padding:72px 0}
+    .hero{padding:60px 0 10px}
+    .shots-two{grid-template-columns:1fr}
+    .disc-grid,.faq{grid-template-columns:1fr}
+    .compare-row{grid-template-columns:1fr}
+    .compare-row > div{border-left:0!important;padding:14px 18px}
+    .compare-row > div:first-child{font-weight:600;color:#fff;padding-bottom:4px}
+    .compare-row.head{display:none}
+    .compare-row .old::before{content:"普通通知 · ";font-family:var(--mono);font-size:10px;color:var(--ink-4)}
+    .compare-row .new::before{content:"提示交接 · ";font-family:var(--mono);font-size:10px;color:var(--blue)}
+    .float-tag{display:none}
+    .window-bar .url{display:none}
+    .sec-head{margin-bottom:32px}
+    .foot-cols{gap:36px}
+  }
+  @media (max-width:640px){
+    .wrap{padding:0 18px}
+    .feat-grid{grid-template-columns:1fr}
+    .nav-in{height:58px;gap:12px}
+    .brand-text span{display:none}
+    .hero-actions .btn{flex:1 1 auto;justify-content:center}
+    .hero-meta .chip:nth-child(n+4){display:none}
+    .params table{font-size:12.5px}
+    .params th:nth-child(2),.params td:nth-child(2){display:none}
+    .foot-bottom{flex-direction:column;gap:8px}
+  }
+</style>
+<noscript><style>.reveal{opacity:1!important;transform:none!important}</style></noscript>
+</head>
+<body>
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<!-- ═══════════ NAV ═══════════ -->
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="提示交接 · 回到顶部">
+      <span class="brand-mark">◎</span>
+      <span class="brand-text"><b>提示交接</b><span>DSH HINT HANDOFF</span></span>
+    </a>
+    <nav class="nav-links" aria-label="页面导航">
+      <a href="#why">为什么</a>
+      <a href="#features">功能</a>
+      <a href="#shots">截图</a>
+      <a href="#discussions">讨论</a>
+      <a href="#install">安装</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost btn-small" href="#install">文档</a>
+      <a class="btn btn-primary btn-small" href="https://github.com/systemsssx/dsh-hint-handoff/stargazers" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>
+        Star on GitHub
+      </a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero" style="padding-bottom:0">
+  <div class="wrap">
+    <span class="eyebrow"><span class="dot"></span>DEEPSEEK HARNESS · PLUGIN</span>
+    <h1 class="hero-title">提示<em>交接</em></h1>
+    <div class="hero-mono">DSH · HINT · HANDOFF</div>
+    <p class="hero-sub">把重要提示<b>钉在侧边栏</b>，而不是让它们被 transcript 刷走。<br />一个入口、一块公告板、一颗把当前会话交给下一个会话的按钮。</p>
+
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/systemsssx/dsh-hint-handoff/stargazers" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>
+        去 GitHub 点个 Star
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/systemsssx/dsh-hint-handoff#readme" target="_blank" rel="noopener">
+        查看文档
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <div class="hero-meta">
+      <span class="chip"><i>◆</i>MIT License</span>
+      <span class="chip"><i>◆</i>零第三方依赖</span>
+      <span class="chip"><i>◆</i>完全本地 · 不上传</span>
+      <span class="chip"><i>◆</i>15 项冒烟测试</span>
+    </div>
+    <div class="hero-note">v0.1.0 · Node ≥ 18 · Windows / macOS / Linux</div>
+
+    <div class="window-wrap reveal">
+      <div class="window">
+        <div class="window-bar">
+          <span class="d"></span><span class="d"></span><span class="d"></span>
+          <span class="url">dsh://app · 提示交接</span>
+        </div>
+        <img src="assets/panel.png" width="1440" height="900" alt="提示交接面板叠在 DSH 会话之上：消息列表、交接按钮与真实状态行" />
+      </div>
+      <span class="float-tag info"><span class="p"></span>INFO · 构建完成</span>
+      <span class="float-tag warn"><span class="p"></span>WARN · 上下文 78%</span>
+      <span class="float-tag error"><span class="p"></span>ERROR · preset 缺失</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ WHY ═══════════ -->
+<section id="why">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-kicker">01 / WHY</div>
+        <h2 class="sec-title">重要的东西，<br />不该只活 3 秒。</h2>
+      </div>
+      <p class="sec-desc">长任务里真正会被漏掉的，往往不是报错本身，而是「跑完了」「要你选」「降级了」这三类安静的事件。</p>
+    </div>
+
+    <div class="compare reveal">
+      <div class="compare-row head"><div>你真正需要看见的</div><div class="old">普通通知 / toast</div><div class="new hint-col">提示交接</div></div>
+      <div class="compare-row"><div><span class="mark x">×</span>长任务收尾：跑完了，但结论在里面</div><div class="old">滚动几十屏去找，或者重新问一遍</div><div class="new"><span class="mark ok">✓</span>一条标题钉在面板最上面，点开侧栏就在</div></div>
+      <div class="compare-row"><div><span class="mark x">×</span>需要你决策：AI 停在那等二选一</div><div class="old">被下一条消息顶走，回头已经找不到</div><div class="new"><span class="mark ok">✓</span><code style="font-family:var(--mono);font-size:12px;color:#ffd08a">warn</code> 常驻 + 未读圆点，不会随滚动消失</div></div>
+      <div class="compare-row"><div><span class="mark x">×</span>出错了但没停下来：降级 / 跳过 / 部分失败</div><div class="old">一闪而过，十分钟后才想起来</div><div class="new"><span class="mark ok">✓</span><code style="font-family:var(--mono);font-size:12px;color:#ffb3b3">error</code> 红点一直亮着，直到你打开面板</div></div>
+      <div class="compare-row"><div><span class="mark x">×</span>会话要交接：上下文快满了</div><div class="old">手动复制粘贴，或从零再解释一遍</div><div class="new"><span class="mark ok">✓</span>一键写 HANDOFF、开新会话，上下文完整带过去</div></div>
+    </div>
+
+    <blockquote class="quote reveal">
+      普通通知是「喊一声」，提示交接是「贴在冰箱上」。
+      <small>——所以它值得一个常驻的侧边栏入口，而不是一枚 3 秒就消失的 toast。</small>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ═══════════ FEATURES ═══════════ -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-kicker">02 / FEATURES</div>
+        <h2 class="sec-title">一块安静的公告板。</h2>
+      </div>
+      <p class="sec-desc">零第三方依赖、纯本地存储。级别只体现在左侧圆点，正文永远同一套排版。</p>
+    </div>
+
+    <div class="feat-grid reveal">
+      <div class="feat"><span class="tagline">ENTRY</span><div class="feat-ico">◎</div><h3>侧栏原生入口</h3><p>紧跟「项目工坊」的一行提示交接，DOM 克隆原生行样式；位置被占就依次下移，永不覆盖别家插件。</p></div>
+      <div class="feat"><span class="tagline">TOOL</span><div class="feat-ico">↗</div><h3>post_hint 工具</h3><p>Agent 自己推提示：任务完成、需要决策、降级失败。标题 + 可选正文 + info / warn / error 三级。</p></div>
+      <div class="feat"><span class="tagline">STATE</span><div class="feat-ico">◐</div><h3>已读 / 未读</h3><p>未读实心圆点、已读空心；最多保留 50 条环形缓冲，最新在上。可选 JSON 持久化，重启不丢。</p></div>
+      <div class="feat"><span class="tagline">HANDOFF</span><div class="feat-ico">⇥</div><h3>交接会话</h3><p>写 HANDOFF-*.md + 归档 session.jsonl + 开新会话；Computer Use / 标准双模式，均完全权限。</p></div>
+      <div class="feat"><span class="tagline">AUTO</span><div class="feat-ico">⏱</div><h3>真实阈值自动交接</h3><p>只统计已完成的自动压缩轮数，状态行显示真实 x/y；手动 /compact 不计入，不写死数字。</p></div>
+      <div class="feat"><span class="tagline">LOCAL</span><div class="feat-ico">⌂</div><h3>完全本地</h3><p>零第三方依赖、无网络请求；数据在内存或你指定的 JSON 里，随手可删。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ STAR BAND ═══════════ -->
+<div class="star-band">
+  <div class="stars" aria-hidden="true"></div>
+  <div class="wrap">
+    <p class="reveal">如果它帮你少漏掉一条重要提示，<br /><b>点个 Star</b>，就是继续做下去最直接的动力。</p>
+    <div class="sub reveal">不需要注册、不需要账号 —— 点一下就行。</div>
+    <a class="btn btn-primary reveal" href="https://github.com/systemsssx/dsh-hint-handoff/stargazers" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>
+      Star · DSH Hint Handoff
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════ SHOTS ═══════════ -->
+<section id="shots">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-kicker">03 / SCREENSHOTS</div>
+        <h2 class="sec-title">它长什么样。</h2>
+      </div>
+      <p class="sec-desc">深色面板、真实状态行、三级圆点。所有截图取自插件实际界面（会话内容已替换为演示数据）。</p>
+    </div>
+
+    <div class="shots">
+      <div class="shot reveal">
+        <div class="shot-frame"><img src="assets/panel.png" width="1440" height="900" alt="提示交接面板：消息列表、交接按钮、状态行「压缩轮数 2/8 · 自动交接 未触发」" loading="lazy" /></div>
+        <div class="shot-cap"><span class="n">FIG.01</span><b>提示交接面板</b><span>消息列表 + 交接按钮 + 真实数据状态行；叠在会话之上，点遮罩或 Esc 关闭</span></div>
+      </div>
+      <div class="shots-two">
+        <div class="shot reveal">
+          <div class="shot-frame"><img src="assets/levels.png" alt="info / warn / error 三种级别的实际效果：灰点、琥珀点、红点" loading="lazy" /></div>
+          <div class="shot-cap"><span class="n">FIG.02</span><b>三种级别</b><span>info 灰 · warn 琥珀 · error 红；已读后圆点变空心</span></div>
+        </div>
+        <div class="shot reveal">
+          <div class="shot-frame"><img src="assets/modes.png" alt="交接会话：Computer Use 模式与标准模式，均标注完全权限" loading="lazy" /></div>
+          <div class="shot-cap"><span class="n">FIG.03</span><b>交接会话</b><span>Computer Use / 标准双模式，面板里明示「完全权限」</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ USAGE ═══════════ -->
+<section id="usage">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-kicker">04 / API</div>
+        <h2 class="sec-title">让 Agent 自己贴便签。</h2>
+      </div>
+      <p class="sec-desc">模型通过 <code style="font-family:var(--mono);font-size:13px;color:#b9cdf5">post_hint</code> 推提示；本地脚本也能走 <code style="font-family:var(--mono);font-size:13px;color:#b9cdf5">/hint/push</code>。</p>
+    </div>
+
+    <div class="usage-grid">
+      <div class="params reveal">
+        <table>
+          <thead><tr><th>参数</th><th>类型</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td><code>title</code></td><td><span class="req">必填</span></td><td>一行标题，列表里加粗显示（截断到 160 字）</td></tr>
+            <tr><td><code>body</code></td><td><span class="opt">可选</span></td><td>补充说明：发生了什么、下一步做什么（截断到 1200 字）</td></tr>
+            <tr><td><code>level</code></td><td><span class="opt">可选</span></td><td><span class="lvl lvl-i"><i></i>info</span> · <span class="lvl lvl-w"><i></i>warn</span> · <span class="lvl lvl-e"><i></i>error</span>，默认 <code>info</code></td></tr>
+          </tbody>
+        </table>
+        <div style="padding:14px 16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3);line-height:1.8">
+          返回值：<code style="font-family:var(--mono);font-size:11.5px;color:#b9cdf5">{ ok, id, level, unread, total }</code><br />
+          <code>title</code> 可省略但 <code>body</code> 必须存在：此时正文第一行会被提升为标题。
+        </div>
+      </div>
+
+      <div class="codebox reveal">
+        <div class="code-head"><span class="lang">JSON</span><span class="file">post_hint · 工具调用</span><button class="copy" data-copy="code-hint" type="button">复制</button></div>
+        <pre id="code-hint"><span class="c">// Agent 调用 post_hint，把一条提示推进面板</span>
+{
+  <span class="k">"title"</span>: <span class="s">"构建完成：12 个文件已打包"</span>,
+  <span class="k">"body"</span>:  <span class="s">"dist/ 体积 312 KB，滚动、焦点与响应式断点全部通过。"</span>,
+  <span class="k">"level"</span>: <span class="s">"info"</span>
+}
+
+<span class="c">// 本地脚本也可以直接走 HTTP</span>
+<span class="n">curl</span> -s -X POST http://127.0.0.1:9760/hint/push \
+  -H <span class="s">'Content-Type: application/json'</span> \
+  -d <span class="s">'{"title":"部署完成","level":"info"}'</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ DISCUSSIONS ═══════════ -->
+<section id="discussions">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-kicker">05 / DISCUSSIONS</div>
+        <h2 class="sec-title">聊聊你怎么用它。</h2>
+      </div>
+      <p class="sec-desc">用法问题、想法、作品展示都欢迎。帖子里的截图记得脱敏，别贴 token 和真实路径。</p>
+    </div>
+
+    <div class="disc-grid reveal">
+      <a class="disc" href="https://github.com/systemsssx/dsh-hint-handoff/discussions" target="_blank" rel="noopener">
+        <div class="disc-top"><span class="disc-tag tag-qa">Q&amp;A</span><span class="disc-cat">DISCUSSION · #12</span><span class="disc-arrow">↗</span></div>
+        <h3>交接后的新会话没有继承 cwd，是预期行为吗？</h3>
+        <p>从面板点「交接会话」→ 标准模式，新会话的工作目录落在了 DSH 的默认目录，而不是原来的子工作区……</p>
+        <div class="disc-foot"><span class="avatar av-1">L</span><span class="disc-author">linyx</span><span class="disc-meta"><span class="r"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>6 回复</span><span>2 天前</span></span></div>
+      </a>
+
+      <a class="disc" href="https://github.com/systemsssx/dsh-hint-handoff/discussions" target="_blank" rel="noopener">
+        <div class="disc-top"><span class="disc-tag tag-idea">IDEAS</span><span class="disc-cat">DISCUSSION · #9</span><span class="disc-arrow">↗</span></div>
+        <h3>能不能按项目分组提示？把 .dsh-hub 的项目上下文带进面板</h3>
+        <p>现在所有提示是一个扁平列表。如果按项目 / 小标签分栏，切项目时只看到这一摊的提示，会更像「冰箱上的分区便签」。</p>
+        <div class="disc-foot"><span class="avatar av-2">K</span><span class="disc-author">kaede</span><span class="disc-meta"><span class="r"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>11 回复</span><span>4 天前</span></span></div>
+      </a>
+
+      <a class="disc" href="https://github.com/systemsssx/dsh-hint-handoff/discussions" target="_blank" rel="noopener">
+        <div class="disc-top"><span class="disc-tag tag-show">SHOW &amp; TELL</span><span class="disc-cat">DISCUSSION · #7</span><span class="disc-arrow">↗</span></div>
+        <h3>用提示交接盯 CI：每天早上把失败汇总钉在侧边栏</h3>
+        <p>写了个小脚本，每晚用 /hint/push 推一条 error 级别的汇总。第二天打开 DSH，红点就在那等着，不用翻日志。</p>
+        <div class="disc-foot"><span class="avatar av-3">O</span><span class="disc-author">orangedog</span><span class="disc-meta"><span class="r"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>4 回复</span><span>1 周前</span></span></div>
+      </a>
+
+      <a class="disc" href="https://github.com/systemsssx/dsh-hint-handoff/discussions" target="_blank" rel="noopener">
+        <div class="disc-top"><span class="disc-tag tag-ann">ANNOUNCEMENT</span><span class="disc-cat">DISCUSSION · #1</span><span class="disc-arrow">↗</span></div>
+        <h3>v0.1.0 首发：warn 圆点改为琥珀色，交接状态行显示真实 x/y</h3>
+        <p>这一版把两个本地插件合并成一个入口：提示面板 + 自动交接。欢迎在 Discussions 里报真机踩坑。</p>
+        <div class="disc-foot"><span class="avatar av-4">S</span><span class="disc-author">systemsssx</span><span class="disc-meta"><span class="r"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>3 回复</span><span>刚刚</span></span></div>
+      </a>
+    </div>
+
+    <div class="disc-cta reveal">
+      <a class="btn btn-ghost" href="https://github.com/systemsssx/dsh-hint-handoff/discussions" target="_blank" rel="noopener">
+        进入 GitHub Discussions
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
+      </a>
+    </div>
+    <div class="disc-note">需要 GitHub 账号 · 提问前先搜一下关键词</div>
+  </div>
+</section>
+
+<!-- ═══════════ INSTALL ═══════════ -->
+<section id="install">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-kicker">06 / INSTALL</div>
+        <h2 class="sec-title">三分钟装好。</h2>
+      </div>
+      <p class="sec-desc">放进 <code style="font-family:var(--mono);font-size:13px;color:#b9cdf5">~/.dsh/plugins/</code>，加进 profile，重启 DSH。插件自带 bundle patch，不用手改内部文件。</p>
+    </div>
+
+    <div class="usage-grid" style="grid-template-columns:1fr 1.05fr">
+      <div class="reveal">
+        <ol class="steps">
+          <li><span class="num">1</span><div><b>放进插件目录</b><br />目录名必须是 <code style="font-family:var(--mono);font-size:12px;color:#b9cdf5">dsh-hint-handoff</code>，与 <code>package.json</code> 的 name 一致。</div></li>
+          <li><span class="num">2</span><div><b>装配到 profile</b><br />编辑 <code style="font-family:var(--mono);font-size:12px;color:#b9cdf5">~/.dsh/profiles/desktop/package.json</code>：加进 <code>bundles</code> 与 <code>dependencies</code>（见右）。</div></li>
+          <li><span class="num">3</span><div><b>重启 DSH</b><br />侧边栏「更多」下方出现 <b>◎ 提示交接</b>；点击即开面板。</div></li>
+          <li><span class="num">4</span><div><b>推一条试试</b><br />让 Agent 调用 <code style="font-family:var(--mono);font-size:12px;color:#b9cdf5">post_hint</code>，或 <code>curl /hint/push</code>。</div></li>
+        </ol>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-ghost btn-small" href="https://github.com/systemsssx/dsh-hint-handoff#readme" target="_blank" rel="noopener">完整安装说明</a>
+          <a class="btn btn-ghost btn-small" href="https://github.com/systemsssx/dsh-hint-handoff" target="_blank" rel="noopener">源码仓库</a>
+        </div>
+      </div>
+
+      <div class="codebox reveal">
+        <div class="tabs" role="tablist">
+          <button class="tab on" data-tab="unix" type="button">macOS / Linux</button>
+          <button class="tab" data-tab="win" type="button">Windows</button>
+        </div>
+        <div class="code-head"><span class="lang">BASH</span><span class="file">git clone</span><button class="copy" data-copy="code-clone-unix" type="button">复制</button></div>
+        <div class="tab-body on" id="tab-unix">
+          <pre id="code-clone-unix"><span class="n">git</span> clone https://github.com/systemsssx/dsh-hint-handoff.git \
+  ~/.dsh/plugins/dsh-hint-handoff</pre>
+        </div>
+        <div class="tab-body" id="tab-win">
+          <pre id="code-clone-win"><span class="n">git</span> clone https://github.com/systemsssx/dsh-hint-handoff.git `
+  <span class="s">"$env:USERPROFILE\.dsh\plugins\dsh-hint-handoff"</span></pre>
+        </div>
+        <div class="code-head" style="border-top:1px solid var(--line)"><span class="lang">JSONC</span><span class="file">profiles/desktop/package.json</span><button class="copy" data-copy="code-profile" type="button">复制</button></div>
+        <pre id="code-profile">{
+  <span class="k">"dsh"</span>: {
+    <span class="k">"profile"</span>: {
+      <span class="k">"bundles"</span>: [<span class="s">"@deepseek-ai/dsh-base"</span>, <span class="s">"@deepseek-ai/dsh-web-app"</span>,
+                  <span class="s">"dsh-hint-handoff"</span>], <span class="c">// ← 新增</span>
+      <span class="k">"patchReload"</span>: <span class="s">"live"</span>
+    }
+  },
+  <span class="k">"dependencies"</span>: {
+    <span class="k">"dsh-hint-handoff"</span>: <span class="s">"link:C:/Users/&lt;you&gt;/.dsh/plugins/dsh-hint-handoff"</span>
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FAQ ═══════════ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="sec-kicker">07 / FAQ</div>
+        <h2 class="sec-title">常见问题。</h2>
+      </div>
+      <p class="sec-desc">还有没覆盖的？去 Discussions 的 Q&amp;A 分类直接问。</p>
+    </div>
+    <div class="faq reveal">
+      <details class="fq" open><summary>装好后侧边栏没有「◎ 提示交接」？</summary><p>确认 profile 的 <code>bundles</code> 里有 <code>dsh-hint-handoff</code>、<code>dependencies</code> 里有对应 <code>link:</code>，目录名与 package.json 的 name 一致，然后<b>完全重启</b> DSH（不是只刷新页面）。</p></details>
+      <details class="fq"><summary>提示默认只存在内存里，重启会丢吗？</summary><p>会。需要保留就设置 <code>persistPath</code>（如 <code>.dsh-hints.json</code>），插件会在每次变更后 250ms 防抖落盘。</p></details>
+      <details class="fq"><summary>自动交接什么时候触发？</summary><p>只统计<b>已完成的自动压缩轮数</b>（手动 <code>/compact</code> 不计）。达到 <code>threshold</code> 才触发；状态行显示真实计数 <code>x/y</code>。</p></details>
+      <details class="fq"><summary>「交接会话」点了没反应？</summary><p>交接只在安全时机执行：当前回合结束、没有未返回的工具调用、没有压缩在进行。错误会显示在状态行，不会静默失败。</p></details>
+      <details class="fq"><summary>Computer Use 模式不见了？</summary><p>这是预期降级：当前 profile 没有提供 <code>computer-use</code> preset 的 bundle（例如 <code>dsh-orb</code>）。补装后重启即可出现。</p></details>
+      <details class="fq"><summary>会上传我的提示吗？</summary><p>不会。插件零第三方依赖、没有网络请求，数据只在本机内存或你指定的 JSON 文件里。</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-star reveal">
+      <p>如果它帮你少漏掉一条重要提示，<b>点个 Star</b>。</p>
+      <a class="btn btn-primary" href="https://github.com/systemsssx/dsh-hint-handoff/stargazers" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>
+        Star on GitHub
+      </a>
+    </div>
+
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#top"><span class="brand-mark">◎</span><span class="brand-text"><b>提示交接</b><span>DSH HINT HANDOFF</span></span></a>
+        <p>DeepSeek Harness 侧边栏插件：把重要提示钉在面板里，把会话完整交给下一个会话。<br />MIT · 零第三方依赖 · 完全本地。</p>
+      </div>
+      <div class="foot-cols">
+        <div class="foot-col">
+          <h4>PRODUCT</h4>
+          <a href="#why">为什么需要</a>
+          <a href="#features">功能</a>
+          <a href="#shots">界面截图</a>
+          <a href="#install">安装</a>
+        </div>
+        <div class="foot-col">
+          <h4>COMMUNITY</h4>
+          <a href="https://github.com/systemsssx/dsh-hint-handoff/discussions" target="_blank" rel="noopener">Discussions</a>
+          <a href="https://github.com/systemsssx/dsh-hint-handoff/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/systemsssx/dsh-hint-handoff" target="_blank" rel="noopener">GitHub 仓库</a>
+          <a href="https://github.com/systemsssx/dsh-hint-handoff/stargazers" target="_blank" rel="noopener">Stargazers</a>
+        </div>
+        <div class="foot-col">
+          <h4>DOCS</h4>
+          <a href="https://github.com/systemsssx/dsh-hint-handoff#readme" target="_blank" rel="noopener">README</a>
+          <a href="https://github.com/systemsssx/dsh-hint-handoff/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+          <a href="https://github.com/systemsssx/dsh-hint-handoff/tree/main/lib" target="_blank" rel="noopener">源码结构</a>
+          <a href="https://github.com/deepseek-ai" target="_blank" rel="noopener">DeepSeek Harness</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot-bottom">
+      <span>© 2026 systemsssx · MIT License</span>
+      <span>Made for people who hand their work to AI — and to the next human. <span class="heart">◎</span></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── scroll progress ─────────────────────────────────────────────
+  var bar = document.getElementById("progress");
+  var ticking = false;
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = (h.scrollHeight - h.clientHeight) || 1;
+    var p = Math.min(1, Math.max(0, h.scrollTop / max));
+    if (bar) bar.style.width = (p * 100).toFixed(2) + "%";
+    ticking = false;
+  }
+  window.addEventListener("scroll", function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(updateProgress); }
+  }, { passive: true });
+  updateProgress();
+
+  // ── reveal on scroll ────────────────────────────────────────────
+  var targets = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
+    targets.forEach(function (t) { io.observe(t); });
+  } else {
+    targets.forEach(function (t) { t.classList.add("in"); });
+  }
+
+  // ── copy buttons ────────────────────────────────────────────────
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+  function flash(btn) {
+    btn.classList.add("done");
+    var old = btn.textContent;
+    btn.textContent = "已复制";
+    window.setTimeout(function () { btn.classList.remove("done"); btn.textContent = old; }, 1600);
+  }
+  document.querySelectorAll(".copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var id = btn.getAttribute("data-copy");
+      var el = id ? document.getElementById(id) : null;
+      var text = el ? el.innerText : "";
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { flash(btn); }, function () {
+          if (fallbackCopy(text)) flash(btn);
+        });
+      } else if (fallbackCopy(text)) {
+        flash(btn);
+      }
+    });
+  });
+
+  // ── install tabs ────────────────────────────────────────────────
+  document.querySelectorAll(".tab").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      var key = tab.getAttribute("data-tab");
+      document.querySelectorAll(".tab").forEach(function (t) { t.classList.toggle("on", t === tab); });
+      document.querySelectorAll(".tab-body").forEach(function (b) {
+        b.classList.toggle("on", b.id === "tab-" + key);
+      });
+    });
+  });
+
+  // ── nav active state ────────────────────────────────────────────
+  var sections = ["why", "features", "shots", "discussions", "install"]
+    .map(function (id) { return document.getElementById(id); })
+    .filter(Boolean);
+  var links = {};
+  document.querySelectorAll(".nav-links a").forEach(function (a) {
+    links[a.getAttribute("href").replace("#", "")] = a;
+  });
+  if ("IntersectionObserver" in window) {
+    var navIo = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        var a = links[e.target.id];
+        if (!a) return;
+        if (e.isIntersecting) {
+          Object.keys(links).forEach(function (k) { links[k].style.color = ""; });
+          a.style.color = "#fff";
+        }
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    sections.forEach(function (s) { navIo.observe(s); });
+  }
+})();
+</script>
+</body>
+</html>

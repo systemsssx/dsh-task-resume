@@ -1,0 +1,53 @@
+# dsh-hint-handoff —— DSH profile 接线图（bundle patch）
+#
+# 合并版本地插件：dsh-hint-ball（提示/消息）+ dsh-auto-handoff（压缩轮数统计、
+# 自动交接、交接动作）。profile 的 `dsh.profile.bundles` 里加入 `dsh-hint-handoff`
+# 后，本文件会被当作 bundle patch 自动叠加，插入下面这一行。
+#
+# row id `hint-handoff` 与 name `dsh-hint-handoff` 是 Settings 插件卡与
+# settings namespace（lib/index.js 里 register('hint-handoff', …)）解析的目标。
+- insert:
+    - id: hint-handoff
+      name: 'dsh-hint-handoff'
+      config:
+        # ── 提示 / hint 部分（原 dsh-hint-ball）──────────────────────────────
+        # enabled         - 总开关；false 时路由仍应答，但推送被拒绝、弹窗状态行
+        #                   显示「自动交接 已关闭」。
+        # maxHints        - 最多保留多少条提示，新的优先（默认 50）。
+        # pollMs          - 弹窗打开时的轮询间隔（默认 4000，钳制 1000..60000）。
+        #                   弹窗内实际钳制到 1..2s；状态行跟随自动交接低频刷新。
+        # autoOpenOnError - 保留字段（新 UI 不再有悬浮球，值为兼容而保留）。
+        # seedFile        - 可选绝对路径 / 相对 host cwd 的 hints.json|HINTS.md，
+        #                   仅插件加载时读一次作为初始提示。空 = 关闭。
+        # persistPath     - 可选提示列表持久化 JSON 文件。空 = 仅内存。
+        enabled: true
+        maxHints: 50
+        pollMs: 4000
+        autoOpenOnError: false
+        seedFile: ''
+        persistPath: ''
+        # ── 交接 / handoff 部分（原 dsh-auto-handoff）────────────────────────
+        # threshold       - 完成「自动压缩」多少轮后触发自动交接（y 值；弹窗状态
+        #                   行显示真实计数 x/y，不写死）。人工 /compact 不计入。
+        # archive         - 同时写 .dsh-handoff/archive/<sessionId>/session.jsonl。
+        # digestEnabled   - 是否请当前模型生成交接摘要；失败则退回确定性事实。
+        # maxDigestTokens - 摘要输出上限（默认 2048）。
+        # keepHandoffs    - 最多保留多少个 HANDOFF-*.md（默认 20）。
+        # outputDir       - 相对会话 cwd，或绝对路径（默认 .dsh-handoff）。
+        # settleDelayMs   - turn/end 之后安全复检的延迟（默认 50ms）。
+        # idleRetries     - agent 仍繁忙时的重试次数（默认 6）。
+        # createNewSession- 由宿主创建续接会话（默认 true）；两种交接模式都会在
+        #                   新会话上钉住完全权限（danger-full-access + never）。
+        # instruction     - 覆盖新会话的第一句提示；留空用内置「读完待命」措辞。
+        threshold: 1
+        archive: true
+        digestEnabled: true
+        maxDigestTokens: 2048
+        keepHandoffs: 20
+        outputDir: '.dsh-handoff'
+        settleDelayMs: 50
+        idleRetries: 6
+        createNewSession: true
+        # instruction: |
+        #   请先完整读取交接文件，理解任务目标与当前进度，然后停在这里待命，
+        #   不要开始任何新的操作，等用户给出下一步指示。
