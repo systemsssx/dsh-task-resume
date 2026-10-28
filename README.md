@@ -1,6 +1,6 @@
-<div align="center">
+﻿<div align="center">
 
-# 提示交接 · DSH Hint Handoff
+# 提示交接 · DSH Task Resume
 
 **把重要提示钉在侧边栏，而不是让它们被 transcript 刷走。**
 
@@ -10,15 +10,17 @@
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-339933?style=flat-square&logo=node.js&logoColor=white)](./package.json)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0ea5e9?style=flat-square)](#安装)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-8b5cf6?style=flat-square)](./package.json)
-[![Version](https://img.shields.io/github/package-json/v/systemsssx/dsh-hint-handoff?style=flat-square&label=version&color=f59e0b)](./package.json)
-[![Stars](https://img.shields.io/github/stars/systemsssx/dsh-hint-handoff?style=flat-square&logo=github&color=fbbf24)](https://github.com/systemsssx/dsh-hint-handoff/stargazers)
-[![Discussions](https://img.shields.io/badge/discussions-open-8b5cf6?style=flat-square&logo=github)](https://github.com/systemsssx/dsh-hint-handoff/discussions)
+[![Version](https://img.shields.io/github/package-json/v/systemsssx/dsh-task-resume?style=flat-square&label=version&color=f59e0b)](./package.json)
+[![Stars](https://img.shields.io/github/stars/systemsssx/dsh-task-resume?style=flat-square&logo=github&color=fbbf24)](https://github.com/systemsssx/dsh-task-resume/stargazers)
+[![Discussions](https://img.shields.io/badge/discussions-open-8b5cf6?style=flat-square&logo=github)](https://github.com/systemsssx/dsh-task-resume/discussions)
 
-<img src="./assets/hero.jpg" width="100%" alt="提示交接 · DSH Hint Handoff" />
+<img src="./assets/hero.jpg" width="100%" alt="提示交接 · DSH Task Resume" />
 
 </div>
 
 > **一句话**：一个侧边栏入口，一块不会被刷走的提示面板，一颗把当前会话完整交给下一个会话的「交接会话」按钮。
+
+> 仓库名 dsh-task-resume；插件包名与安装目录仍是 dsh-hint-handoff（git clone 时用仓库 URL 即可，目录名照旧）。
 
 - **中文**：[为什么需要它](#为什么需要它) · [功能](#功能) · [安装](#安装) · [使用](#使用) · [面板交互](#面板交互) · [架构](#架构) · [FAQ](#faq)
 - **English**：[TL;DR in English](#english-summary)
@@ -83,10 +85,10 @@ Agent 跑长任务时，「待会儿要处理」的信息通常只有两条出�
 
 ```bash
 # macOS / Linux
-git clone https://github.com/systemsssx/dsh-hint-handoff.git ~/.dsh/plugins/dsh-hint-handoff
+git clone https://github.com/systemsssx/dsh-task-resume.git ~/.dsh/plugins/dsh-hint-handoff
 
 # Windows (PowerShell)
-git clone https://github.com/systemsssx/dsh-hint-handoff.git "$env:USERPROFILE\.dsh\plugins\dsh-hint-handoff"
+git clone https://github.com/systemsssx/dsh-task-resume.git "$env:USERPROFILE\.dsh\plugins\dsh-hint-handoff"
 ```
 
 目录名必须是 `dsh-hint-handoff`（与 `package.json` 的 `name` 一致）。
@@ -404,9 +406,9 @@ npm run check   # 六个 lib 文件语法自检
 
 **点个 ⭐ Star，就是继续做下去最直接的动力。**
 
-[![Star](https://img.shields.io/github/stars/systemsssx/dsh-hint-handoff?style=for-the-badge&logo=github&label=%E2%AD%90%20Star)](https://github.com/systemsssx/dsh-hint-handoff/stargazers)
+[![Star](https://img.shields.io/github/stars/systemsssx/dsh-task-resume?style=for-the-badge&logo=github&label=%E2%AD%90%20Star)](https://github.com/systemsssx/dsh-task-resume/stargazers)
 &nbsp;
-[![Fork](https://img.shields.io/badge/Fork-%E5%B8%A6%E8%B5%B0%E6%94%B9-blue?style=for-the-badge&logo=github)](https://github.com/systemsssx/dsh-hint-handoff/fork)
+[![Fork](https://img.shields.io/badge/Fork-%E5%B8%A6%E8%B5%B0%E6%94%B9-blue?style=for-the-badge&logo=github)](https://github.com/systemsssx/dsh-task-resume/fork)
 
 <sub>Fork 之后欢迎把改动推回来：错别字、新策略、真机踩坑都收。</sub>
 
@@ -418,10 +420,10 @@ npm run check   # 六个 lib 文件语法自检
 
 | 我想… | 去哪儿 | 请带上 |
 |---|---|---|
-| ❓ 提问 / 讨论用法 | **[Discussions](https://github.com/systemsssx/dsh-hint-handoff/discussions)** | 你的 DSH 版本 + 面板截图（记得脱敏） |
-| 🐛 报 Bug | **[Issues](https://github.com/systemsssx/dsh-hint-handoff/issues)** | 复现步骤、期望 vs 实际、DevTools 报错 |
-| 💡 提需求 | **[Issues · Feature](https://github.com/systemsssx/dsh-hint-handoff/issues/new)** | 使用场景 + 现在卡在哪 |
-| 🛠️ 提 PR | **[Pull Request](https://github.com/systemsssx/dsh-hint-handoff/compare)** | 改动说明 + `npm test` 输出 |
+| ❓ 提问 / 讨论用法 | **[Discussions](https://github.com/systemsssx/dsh-task-resume/discussions)** | 你的 DSH 版本 + 面板截图（记得脱敏） |
+| 🐛 报 Bug | **[Issues](https://github.com/systemsssx/dsh-task-resume/issues)** | 复现步骤、期望 vs 实际、DevTools 报错 |
+| 💡 提需求 | **[Issues · Feature](https://github.com/systemsssx/dsh-task-resume/issues/new)** | 使用场景 + 现在卡在哪 |
+| 🛠️ 提 PR | **[Pull Request](https://github.com/systemsssx/dsh-task-resume/compare)** | 改动说明 + `npm test` 输出 |
 
 > 发帖别贴 token / 真实绝对路径 / 用户名，用 `<你的工作区>`、`<项目>` 占位。
 
@@ -429,7 +431,7 @@ npm run check   # 六个 lib 文件语法自检
 
 ## English summary
 
-**DSH Hint Handoff** is a sidebar plugin for DeepSeek Harness that turns transient notifications into pinned, persistent hints — and adds a one-click session handoff.
+**DSH Task Resume** is a sidebar plugin for DeepSeek Harness that turns transient notifications into pinned, persistent hints — and adds a one-click session handoff.
 
 - Sidebar entry `◎ 提示交接` opens a dark panel with a scrollable hint list, a handoff button, and a live status line.
 - The agent publishes hints through the `post_hint` tool (`title`, optional `body`, `level` = `info` / `warn` / `error`); local scripts can `POST /hint/push`.

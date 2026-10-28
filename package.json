@@ -1,9 +1,11 @@
-{
+﻿{
   "name": "dsh-hint-handoff",
   "version": "0.1.0",
   "description": "提示交接：把 dsh-hint-ball 与 dsh-auto-handoff 合并成一个本地 DSH 插件——侧栏「提示交接」入口、消息板块 + 交接按钮的暗色弹窗、Computer Use / 标准两种完全权限模式的交接，以及按真实压缩轮数阈值自动触发交接。 · Merged DeepSeek Harness plugin (hint ball + auto handoff): one sidebar entry, a compact dark dialog with a hint list and a handoff action (Computer Use / standard modes, both full access), and automatic handoff driven by the real compaction-round threshold.",
   "type": "module",
   "main": "lib/index.js",
+  "repository": { "type": "git", "url": "https://github.com/systemsssx/dsh-task-resume.git" },
+  "homepage": "https://github.com/systemsssx/dsh-task-resume",
   "license": "MIT",
   "private": true,
   "keywords": [
