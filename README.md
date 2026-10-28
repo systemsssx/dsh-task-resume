@@ -6,6 +6,7 @@
 
 *Pinned hints + one-click session handoff for DeepSeek Harness.*
 
+[![Homepage](https://img.shields.io/badge/homepage-live-22c55e?style=flat-square&logo=githubpages&logoColor=white)](https://systemsssx.github.io/dsh-task-resume/)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-339933?style=flat-square&logo=node.js&logoColor=white)](./package.json)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0ea5e9?style=flat-square)](#安装)
